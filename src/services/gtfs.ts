@@ -1,5 +1,5 @@
 import JSZip from 'jszip';
-import { Station, Train, TimetableEntry } from '../types';
+import { Station, Train, TimetableEntry, Direction } from '../types';
 
 interface GTFSStop {
   stop_id: string;
@@ -51,20 +51,19 @@ class GTFSService {
   private calendar: GTFSCalendar[] = [];
   private routes: Map<string, GTFSRoute> = new Map();
   private loaded = false;
+  private timetableData: TimetableEntry[] = [];
+  private initialized = false;
 
   async loadGTFSData(gtfsUrl: string): Promise<void> {
-    if (this.loaded) return;
+    if (this.initialized) return;
 
     try {
       const response = await fetch(gtfsUrl);
-      if (!response.ok) throw new Error('Failed to fetch GTFS data');
-      
-      const zipBuffer = await response.arrayBuffer();
-      const zip = new JSZip();
-      const contents = await zip.loadAsync(zipBuffer);
+      const blob = await response.blob();
+      const zip = await JSZip.loadAsync(blob);
       
       // Parse routes.txt first
-      const routesText = await contents.file('routes.txt')?.async('text');
+      const routesText = await zip.file('routes.txt')?.async('text');
       if (routesText) {
         const routes = this.parseCSV<GTFSRoute>(routesText);
         routes.forEach(route => {
@@ -72,35 +71,44 @@ class GTFSService {
         });
       }
 
-      // Parse stops.txt
-      const stopsText = await contents.file('stops.txt')?.async('text');
-      if (stopsText) {
-        this.stations = this.parseCSV<GTFSStop>(stopsText).map(stop => ({
-          id: stop.stop_id,
-          name: stop.stop_name,
-          code: stop.stop_code || stop.stop_id,
-          location: {
-            lat: parseFloat(stop.stop_lat),
-            lon: parseFloat(stop.stop_lon)
-          }
-        }));
-        console.log("Found stations", this.stations);
-      }
+      // Load stops.txt
+      const stopsFile = await zip.file('stops.txt')?.async('text');
+      if (!stopsFile) throw new Error('stops.txt not found in GTFS data');
+
+      const stops = this.parseCSV<GTFSStop>(stopsFile);
+      this.stations = stops
+        .filter(stop => stop.stop_id && stop.stop_name)
+        .map(stop => {
+          const name = stop.stop_name;
+          const direction = this.getDirectionFromName(name);
+          return {
+            id: stop.stop_id,
+            name: name,
+            direction: direction,
+            displayName: this.removeDirectionSuffix(name),
+            code: stop.stop_code || stop.stop_id,
+            location: {
+              lat: parseFloat(stop.stop_lat),
+              lon: parseFloat(stop.stop_lon)
+            }
+          };
+        })
+        .filter(station => station.direction !== null);
 
       // Parse stop_times.txt
-      const stopTimesText = await contents.file('stop_times.txt')?.async('text');
+      const stopTimesText = await zip.file('stop_times.txt')?.async('text');
       if (stopTimesText) {
         this.stopTimes = this.parseCSV<GTFSStopTime>(stopTimesText);
       }
 
       // Parse calendar.txt
-      const calendarText = await contents.file('calendar.txt')?.async('text');
+      const calendarText = await zip.file('calendar.txt')?.async('text');
       if (calendarText) {
         this.calendar = this.parseCSV<GTFSCalendar>(calendarText);
       }
 
       // Parse trips.txt
-      const tripsText = await contents.file('trips.txt')?.async('text');
+      const tripsText = await zip.file('trips.txt')?.async('text');
       if (tripsText) {
         const trips = this.parseCSV<GTFSTrip>(tripsText);
         this.trains = trips.map(trip => {
@@ -126,6 +134,7 @@ class GTFSService {
       }
 
       this.loaded = true;
+      this.initialized = true;
     } catch (error) {
       console.error('Error loading GTFS data:', error);
       throw error;
@@ -147,17 +156,31 @@ class GTFSService {
   }
 
   getStations(): Station[] {
-    // Sort stations from northwest (higher lat, lower lon) to southeast (lower lat, higher lon)
-    return [...this.stations].sort((a, b) => {
-      // Calculate a score that combines latitude and longitude
-      // Higher latitude (more north) and lower longitude (more west) will get a higher score
-      const scoreA = a.location.lat - a.location.lon;
-      const scoreB = b.location.lat - b.location.lon;
-      return scoreB - scoreA; // Sort in descending order (northwest first)
-    });
+    return this.stations;
+  }
+
+  getUniqueStationNames(): string[] {
+    const uniqueNames = new Set<string>();
+    this.stations.forEach(station => uniqueNames.add(station.displayName));
+    return Array.from(uniqueNames).sort();
+  }
+
+  getStationsByDirection(direction: Direction): Station[] {
+    return this.stations.filter(station => station.direction === direction);
+  }
+
+  getStationByNameAndDirection(displayName: string, direction: Direction): Station | undefined {
+    return this.stations.find(
+      station => station.displayName === displayName && station.direction === direction
+    );
   }
 
   getTimetable(fromStation: Station, toStation: Station): TimetableEntry[] {
+    // Only return timetable entries if stations are in the same direction
+    if (fromStation.direction !== toStation.direction) {
+      return [];
+    }
+    
     const relevantStopTimes = this.stopTimes.filter(st => 
       st.stop_id === fromStation.id || st.stop_id === toStation.id
     );
@@ -177,7 +200,7 @@ class GTFSService {
       if (toStopTime) {
         const train = this.trains.find(t => t.id === fromStopTime.trip_id);
         if (train) {
-          timetable.push({
+          const entry: TimetableEntry = {
             train: {
               ...train,
               departureTime: fromStopTime.departure_time,
@@ -187,7 +210,8 @@ class GTFSService {
             toStation,
             departureTime: fromStopTime.departure_time,
             arrivalTime: toStopTime.arrival_time
-          });
+          };
+          timetable.push(entry);
           processedTrips.add(fromStopTime.trip_id);
         }
       }
@@ -196,6 +220,20 @@ class GTFSService {
     return timetable.sort((a, b) => 
       a.departureTime.localeCompare(b.departureTime)
     );
+  }
+
+  private getDirectionFromName(name: string): 'Northbound' | 'Southbound' | null {
+    if (name.includes('Northbound')) return 'Northbound';
+    if (name.includes('Southbound')) return 'Southbound';
+    return null;
+  }
+
+  private removeDirectionSuffix(name: string): string {
+    return name
+      .replace(' Northbound', '')
+      .replace(' Southbound', '')
+      .replace(' Caltrain', '')
+      .trim();
   }
 }
 

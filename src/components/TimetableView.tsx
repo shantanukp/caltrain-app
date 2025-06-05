@@ -10,14 +10,19 @@ import {
   Typography,
   CircularProgress,
   Box,
-  Tooltip
+  Tooltip,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
-import { Station, TimetableEntry } from '../types';
+import { Station, TimetableEntry, Direction } from '../types';
 import { gtfsService } from '../services/gtfs';
+import DirectionSelector from './DirectionSelector';
 
 interface TimetableViewProps {
   fromStation: Station;
   toStation: Station;
+  direction: Direction;
+  onDirectionChange: (direction: Direction) => void;
 }
 
 const formatTime = (time: string) => {
@@ -58,23 +63,35 @@ const getRouteStyle = (routeType: string) => {
   
   if (type.includes('bullet') || type.includes('express')) {
     return { 
-      backgroundColor: '#f1f8e9',  // Light green
-      borderLeft: '4px solid #4caf50' // Green
+      backgroundColor: 'rgba(76, 175, 80, 0.15)',  // Green with higher opacity
+      borderLeft: '4px solid #4caf50', // Green
+      '&:hover': {
+        backgroundColor: 'rgba(76, 175, 80, 0.25)' // Darker on hover
+      }
     }; 
   } else if (type.includes('limited')) {
     return { 
-      backgroundColor: '#e3f2fd',  // Light blue
-      borderLeft: '4px solid #2196f3' // Blue
+      backgroundColor: 'rgba(33, 150, 243, 0.15)',  // Blue with higher opacity
+      borderLeft: '4px solid #2196f3', // Blue
+      '&:hover': {
+        backgroundColor: 'rgba(33, 150, 243, 0.25)' // Darker on hover
+      }
     }; 
   } else if (type.includes('local')) {
     return { 
-      backgroundColor: '#fff3e0',  // Light orange
-      borderLeft: '4px solid #ff9800' // Orange
+      backgroundColor: 'rgba(255, 152, 0, 0.15)',  // Orange with higher opacity
+      borderLeft: '4px solid #ff9800', // Orange
+      '&:hover': {
+        backgroundColor: 'rgba(255, 152, 0, 0.25)' // Darker on hover
+      }
     }; 
   } else {
     return { 
-      backgroundColor: '#ffffff',  // White
-      borderLeft: '4px solid #9e9e9e' // Grey
+      backgroundColor: 'rgba(158, 158, 158, 0.1)',  // Grey with higher opacity
+      borderLeft: '4px solid #9e9e9e', // Grey
+      '&:hover': {
+        backgroundColor: 'rgba(158, 158, 158, 0.2)' // Darker on hover
+      }
     }; 
   }
 };
@@ -97,9 +114,16 @@ const formatDate = (date: Date) => {
   });
 };
 
-const TimetableView: React.FC<TimetableViewProps> = ({ fromStation, toStation }) => {
+const TimetableView: React.FC<TimetableViewProps> = ({ 
+  fromStation, 
+  toStation, 
+  direction,
+  onDirectionChange 
+}) => {
   const [timetableEntries, setTimetableEntries] = useState<TimetableEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
     setLoading(true);
@@ -118,17 +142,72 @@ const TimetableView: React.FC<TimetableViewProps> = ({ fromStation, toStation })
   }
 
   return (
-    <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-      <Typography variant="h5" sx={{ p: 2 }}>
-        Schedule: {fromStation.name} → {toStation.name}
-      </Typography>
+    <Box sx={{ 
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden'
+    }}>
+      <Box sx={{ 
+        px: 2, 
+        pt: 1, 
+        pb: 1,
+        display: 'flex',
+        flexDirection: isMobile ? 'column' : 'row',
+        justifyContent: 'space-between',
+        alignItems: isMobile ? 'stretch' : 'center',
+        gap: isMobile ? 2 : 0
+      }}>
+        <Box>
+          <Typography 
+            variant={isMobile ? "h6" : "h5"} 
+            gutterBottom
+            sx={{
+              wordBreak: 'break-word',
+              textAlign: isMobile ? 'center' : 'left'
+            }}
+          >
+            Schedule: {fromStation.displayName} → {toStation.displayName}
+          </Typography>
 
-      <Typography variant="subtitle1" sx={{ px: 2, color: 'text.secondary' }}>
-        {formatDate(new Date())}
-      </Typography>
+          <Typography 
+            variant="subtitle1" 
+            sx={{ 
+              color: 'text.secondary',
+              textAlign: isMobile ? 'center' : 'left'
+            }}
+          >
+            {formatDate(new Date())}
+          </Typography>
+        </Box>
+
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: isMobile ? 'center' : 'flex-end'
+        }}>
+          <DirectionSelector 
+            direction={direction}
+            onDirectionChange={onDirectionChange}
+          />
+        </Box>
+      </Box>
       
-      <Box sx={{ px: 2, pb: 2 }}>
-        <Typography variant="subtitle2" color="text.secondary">
+      <Box sx={{ 
+        px: 2, 
+        pb: 1,
+        overflowX: 'auto',
+        display: isMobile ? 'flex' : 'block',
+        justifyContent: 'center'
+      }}>
+        <Typography 
+          variant="subtitle2" 
+          color="text.secondary"
+          component="div"
+          sx={{
+            whiteSpace: 'nowrap',
+            textAlign: isMobile ? 'center' : 'left'
+          }}
+        >
           <span style={{ color: '#4caf50' }}>●</span> Baby Bullet/Express &nbsp;&nbsp;
           <span style={{ color: '#2196f3' }}>●</span> Limited &nbsp;&nbsp;
           <span style={{ color: '#ff9800' }}>●</span> Local &nbsp;&nbsp;
@@ -136,15 +215,88 @@ const TimetableView: React.FC<TimetableViewProps> = ({ fromStation, toStation })
         </Typography>
       </Box>
       
-      <TableContainer sx={{ maxHeight: 440 }}>
-        <Table stickyHeader>
+      <TableContainer component={Paper} sx={{ 
+        flex: 1,
+        overflow: 'auto',
+        borderRadius: 1,
+        '& .MuiTable-root': {
+          borderCollapse: 'separate',
+          borderSpacing: 0,
+        }
+      }}>
+        <Table stickyHeader size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Train</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Departure</TableCell>
-              <TableCell>Arrival</TableCell>
-              <TableCell>Duration</TableCell>
+              <TableCell 
+                sx={{ 
+                  fontWeight: 'bold',
+                  backgroundColor: 'background.paper',
+                  borderBottom: 2,
+                  borderColor: 'divider',
+                  ...(isMobile && {
+                    padding: '8px',
+                    whiteSpace: 'nowrap'
+                  })
+                }}
+              >
+                Train
+              </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontWeight: 'bold',
+                  backgroundColor: 'background.paper',
+                  borderBottom: 2,
+                  borderColor: 'divider',
+                  ...(isMobile && {
+                    padding: '8px',
+                    whiteSpace: 'nowrap'
+                  })
+                }}
+              >
+                Type
+              </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontWeight: 'bold',
+                  backgroundColor: 'background.paper',
+                  borderBottom: 2,
+                  borderColor: 'divider',
+                  ...(isMobile && {
+                    padding: '8px',
+                    whiteSpace: 'nowrap'
+                  })
+                }}
+              >
+                Departure
+              </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontWeight: 'bold',
+                  backgroundColor: 'background.paper',
+                  borderBottom: 2,
+                  borderColor: 'divider',
+                  ...(isMobile && {
+                    padding: '8px',
+                    whiteSpace: 'nowrap'
+                  })
+                }}
+              >
+                Arrival
+              </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontWeight: 'bold',
+                  backgroundColor: 'background.paper',
+                  borderBottom: 2,
+                  borderColor: 'divider',
+                  ...(isMobile && {
+                    padding: '8px',
+                    whiteSpace: 'nowrap'
+                  })
+                }}
+              >
+                Duration
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -153,7 +305,18 @@ const TimetableView: React.FC<TimetableViewProps> = ({ fromStation, toStation })
               return (
                 <TableRow 
                   key={`${entry.train.id}-${entry.departureTime}`}
-                  sx={getRouteStyle(entry.train.routeType)}
+                  sx={{
+                    ...getRouteStyle(entry.train.routeType),
+                    '&:hover': {
+                      filter: 'brightness(0.95)'
+                    },
+                    ...(isMobile && {
+                      '& .MuiTableCell-root': {
+                        padding: '8px',
+                        whiteSpace: 'nowrap'
+                      }
+                    })
+                  }}
                 >
                   <TableCell>{entry.train.id}</TableCell>
                   <TableCell>
@@ -177,7 +340,7 @@ const TimetableView: React.FC<TimetableViewProps> = ({ fromStation, toStation })
           </TableBody>
         </Table>
       </TableContainer>
-    </Paper>
+    </Box>
   );
 };
 
