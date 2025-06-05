@@ -1,62 +1,26 @@
 # Caltrain Timetable App
 
-A React application that displays train timetables using GTFS (General Transit Feed Specification) data. Users can select origin and destination stations to view all available trains between those stations.
+A modern, responsive web application for viewing Caltrain schedules with an intuitive user interface.
 
 ## Features
 
-- Station selection with autocomplete
-- Display of train schedules between selected stations
-- Service day information (weekday/weekend service)
-- Compatible with GTFS format data
-- Modern Material-UI interface
+- 🚉 Station selection with autocomplete
+- 🔄 Easy direction switching (Northbound/Southbound)
+- 🎨 Color-coded train types (Express/Limited/Local)
+- 🕒 12-hour time format with AM/PM
+- 📱 Mobile-responsive design
+- 🔗 URL-based station selection for bookmarking
+- 🚂 Real-time train status indicators
 
-## Setup
+## Data Source
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/caltrain-app.git
-cd caltrain-app
-```
+The application currently uses GTFS (General Transit Feed Specification) data from Caltrain, downloaded from [data.trilliumtransit.com](https://data.trilliumtransit.com/gtfs/caltrain-ca-us/caltrain-ca-us.zip) as of March 2024.
 
-2. Install dependencies:
-```bash
-npm install
-```
+## Todo
 
-3. Configure GTFS data source:
-   - Open `src/components/StationSelector.tsx`
-   - Replace `YOUR_GTFS_URL_HERE` with the URL to your GTFS data feed
-
-4. Start the development server:
-```bash
-npm start
-```
-
-The application will be available at http://localhost:3000
-
-## GTFS Data Format
-
-This application expects GTFS data in the standard format, including:
-- stops.txt - For station information
-- trips.txt - For train trip information
-- stop_times.txt - For arrival and departure times
-- calendar.txt - For service day information
-
-## Technologies Used
-
-- React
-- TypeScript
-- Material-UI
-- GTFS-Stream (for GTFS data parsing)
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+- [ ] Implement live GTFS data fetching from Caltrain's official feed
+- [ ] Support for holiday schedules
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+MIT

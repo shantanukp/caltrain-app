@@ -17,6 +17,13 @@ import {
 import { Station, TimetableEntry, Direction } from '../types';
 import { gtfsService } from '../services/gtfs';
 import DirectionSelector from './DirectionSelector';
+import TrainIcon from '@mui/icons-material/Train';
+import FastForwardIcon from '@mui/icons-material/FastForward';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import SlowMotionVideoIcon from '@mui/icons-material/SlowMotionVideo';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import { keyframes } from '@mui/system';
 
 interface TimetableViewProps {
   fromStation: Station;
@@ -114,6 +121,71 @@ const formatDate = (date: Date) => {
   });
 };
 
+const getTrainTypeIcon = (routeType: string) => {
+  const type = routeType.toLowerCase();
+  if (type.includes('bullet') || type.includes('express')) {
+    return <FastForwardIcon fontSize="small" sx={{ opacity: 0.7 }} />;
+  } else if (type.includes('limited')) {
+    return <PlayArrowIcon fontSize="small" sx={{ opacity: 0.7 }} />;
+  } else if (type.includes('local')) {
+    return <SlowMotionVideoIcon fontSize="small" sx={{ opacity: 0.7 }} />;
+  }
+  return <TrainIcon fontSize="small" sx={{ opacity: 0.7 }} />;
+};
+
+const blinkAnimation = keyframes`
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+`;
+
+const getTrainStatusIcon = (departureTime: string, arrivalTime: string) => {
+  const now = new Date(Date.now() - 6 * 60 * 60 * 1000); // 6 hours ago
+  const currentTime = now.getHours() * 60 + now.getMinutes();
+
+  const [depHours, depMinutes] = departureTime.split(':').map(Number);
+  const [arrHours, arrMinutes] = arrivalTime.split(':').map(Number);
+  
+  const departureMinutes = (depHours % 24) * 60 + depMinutes;
+  const arrivalMinutes = (arrHours % 24) * 60 + arrMinutes;
+
+  if (currentTime > arrivalMinutes) {
+    // Train has completed its journey
+    return (
+      <CheckCircleIcon 
+        fontSize="small" 
+        sx={{ 
+          color: '#4caf50',
+          opacity: 0.7 
+        }} 
+      />
+    );
+  } else if (currentTime >= departureMinutes && currentTime <= arrivalMinutes) {
+    // Train is currently running
+    return (
+      <FiberManualRecordIcon 
+        fontSize="small" 
+        sx={{ 
+          color: '#4caf50',
+          opacity: 0.7,
+          animation: `${blinkAnimation} 2s infinite ease-in-out`
+        }} 
+      />
+    );
+  } else {
+    // Train is scheduled for future
+    return (
+      <FiberManualRecordIcon 
+        fontSize="small" 
+        sx={{ 
+          color: '#ffc107',
+          opacity: 0.7 
+        }} 
+      />
+    );
+  }
+};
+
 const TimetableView: React.FC<TimetableViewProps> = ({ 
   fromStation, 
   toStation, 
@@ -190,29 +262,6 @@ const TimetableView: React.FC<TimetableViewProps> = ({
             onDirectionChange={onDirectionChange}
           />
         </Box>
-      </Box>
-      
-      <Box sx={{ 
-        px: 2, 
-        pb: 1,
-        overflowX: 'auto',
-        display: isMobile ? 'flex' : 'block',
-        justifyContent: 'center'
-      }}>
-        <Typography 
-          variant="subtitle2" 
-          color="text.secondary"
-          component="div"
-          sx={{
-            whiteSpace: 'nowrap',
-            textAlign: isMobile ? 'center' : 'left'
-          }}
-        >
-          <span style={{ color: '#4caf50' }}>●</span> Baby Bullet/Express &nbsp;&nbsp;
-          <span style={{ color: '#2196f3' }}>●</span> Limited &nbsp;&nbsp;
-          <span style={{ color: '#ff9800' }}>●</span> Local &nbsp;&nbsp;
-          <span style={{ color: '#9e9e9e' }}>●</span> Other
-        </Typography>
       </Box>
       
       <TableContainer component={Paper} sx={{ 
@@ -297,6 +346,20 @@ const TimetableView: React.FC<TimetableViewProps> = ({
               >
                 Duration
               </TableCell>
+              <TableCell 
+                sx={{ 
+                  fontWeight: 'bold',
+                  backgroundColor: 'background.paper',
+                  borderBottom: 2,
+                  borderColor: 'divider',
+                  ...(isMobile && {
+                    padding: '8px',
+                    whiteSpace: 'nowrap'
+                  })
+                }}
+              >
+                Stops
+              </TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -318,21 +381,30 @@ const TimetableView: React.FC<TimetableViewProps> = ({
                     })
                   }}
                 >
-                  <TableCell>{entry.train.id}</TableCell>
                   <TableCell>
-                    <Tooltip title={entry.train.headsign}>
-                      <span>{entry.train.routeType}</span>
-                    </Tooltip>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {getTrainStatusIcon(entry.departureTime, entry.arrivalTime)}
+                      {entry.train.id}
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {getTrainTypeIcon(entry.train.routeType)}
+                      <Tooltip title={entry.train.headsign}>
+                        <span>{entry.train.routeType}</span>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                   <TableCell>{formatTime(entry.departureTime)}</TableCell>
                   <TableCell>{formatTime(entry.arrivalTime)}</TableCell>
                   <TableCell>{duration.text}</TableCell>
+                  <TableCell>{entry.numStops}</TableCell>
                 </TableRow>
               );
             })}
             {timetableEntries.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} align="center">
+                <TableCell colSpan={6} align="center">
                   No trains running on this route today
                 </TableCell>
               </TableRow>

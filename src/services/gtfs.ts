@@ -175,6 +175,28 @@ class GTFSService {
     );
   }
 
+  getStopsBetween(tripId: string, fromStationId: string, toStationId: string): number {
+    // Get all stop times for this trip
+    const tripStops = this.stopTimes
+      .filter(st => st.trip_id === tripId)
+      .sort((a, b) => parseInt(a.stop_sequence) - parseInt(b.stop_sequence));
+
+    // Find the sequence numbers for our stations
+    const fromStop = tripStops.find(st => st.stop_id === fromStationId);
+    const toStop = tripStops.find(st => st.stop_id === toStationId);
+
+    if (!fromStop || !toStop) return 0;
+
+    const fromSeq = parseInt(fromStop.stop_sequence);
+    const toSeq = parseInt(toStop.stop_sequence);
+
+    // Count stops between these sequences (excluding the departure station)
+    return tripStops.filter(st => {
+      const seq = parseInt(st.stop_sequence);
+      return seq > fromSeq && seq <= toSeq;
+    }).length;
+  }
+
   getTimetable(fromStation: Station, toStation: Station): TimetableEntry[] {
     // Only return timetable entries if stations are in the same direction
     if (fromStation.direction !== toStation.direction) {
@@ -200,6 +222,7 @@ class GTFSService {
       if (toStopTime) {
         const train = this.trains.find(t => t.id === fromStopTime.trip_id);
         if (train) {
+          const numStops = this.getStopsBetween(train.id, fromStation.id, toStation.id);
           const entry: TimetableEntry = {
             train: {
               ...train,
@@ -209,7 +232,8 @@ class GTFSService {
             fromStation,
             toStation,
             departureTime: fromStopTime.departure_time,
-            arrivalTime: toStopTime.arrival_time
+            arrivalTime: toStopTime.arrival_time,
+            numStops
           };
           timetable.push(entry);
           processedTrips.add(fromStopTime.trip_id);

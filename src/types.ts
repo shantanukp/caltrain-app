@@ -28,22 +28,10 @@ export interface Train {
 }
 
 export interface TimetableEntry {
-  train: {
-    id: string;
-    routeId: string;
-    tripId: string;
-    routeType: string;
-    headsign: string;
-    departureTime: string;
-    arrivalTime: string;
-    service: {
-      weekday: boolean;
-      saturday: boolean;
-      sunday: boolean;
-    };
-  };
-  departureTime: string;
-  arrivalTime: string;
+  train: Train;
   fromStation: Station;
   toStation: Station;
+  departureTime: string;
+  arrivalTime: string;
+  numStops: number;
 } 
