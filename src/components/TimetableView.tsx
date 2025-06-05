@@ -140,7 +140,7 @@ const blinkAnimation = keyframes`
 `;
 
 const getTrainStatusIcon = (departureTime: string, arrivalTime: string) => {
-  const now = new Date(Date.now() - 6 * 60 * 60 * 1000); // 6 hours ago
+  const now = new Date();
   const currentTime = now.getHours() * 60 + now.getMinutes();
 
   const [depHours, depMinutes] = departureTime.split(':').map(Number);
