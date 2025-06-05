@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/caltrain-app/static/css/main.e6c13ad2.css",
+    "main.js": "/caltrain-app/static/js/main.822471d5.js",
+    "static/js/453.06e14e36.chunk.js": "/caltrain-app/static/js/453.06e14e36.chunk.js",
+    "index.html": "/caltrain-app/index.html",
+    "main.e6c13ad2.css.map": "/caltrain-app/static/css/main.e6c13ad2.css.map",
+    "main.822471d5.js.map": "/caltrain-app/static/js/main.822471d5.js.map",
+    "453.06e14e36.chunk.js.map": "/caltrain-app/static/js/453.06e14e36.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.e6c13ad2.css",
+    "static/js/main.822471d5.js"
+  ]
+}
