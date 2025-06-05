@@ -1,6 +1,7 @@
 {
   "name": "caltrain-app",
   "version": "0.1.0",
+  "homepage": "https://shantanukp.github.io/caltrain-app",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.11.3",
@@ -29,6 +30,8 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build",
     "start": "react-app-rewired start",
     "build": "react-app-rewired build",
     "test": "react-app-rewired test",
@@ -51,5 +54,8 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
   }
 }

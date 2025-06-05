@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Typography, Box, ThemeProvider, CssBaseline } from '@mui/material';
-import { BrowserRouter, useSearchParams } from 'react-router-dom';
+import { HashRouter, useSearchParams } from 'react-router-dom';
 import StationSelector from './components/StationSelector';
 import TimetableView from './components/TimetableView';
 import { Station, Direction } from './types';
@@ -199,9 +199,9 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <BrowserRouter>
+      <HashRouter>
         <AppContent />
-      </BrowserRouter>
+      </HashRouter>
     </ThemeProvider>
   );
 }

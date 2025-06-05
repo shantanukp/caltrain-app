@@ -58,7 +58,7 @@ class GTFSService {
     if (this.initialized) return;
 
     try {
-      const response = await fetch(gtfsUrl);
+      const response = await fetch(process.env.PUBLIC_URL + gtfsUrl);
       const blob = await response.blob();
       const zip = await JSZip.loadAsync(blob);
       
