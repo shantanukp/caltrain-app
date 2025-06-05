@@ -20,7 +20,3 @@ The application currently uses GTFS (General Transit Feed Specification) data fr
 
 - [ ] Implement live GTFS data fetching from Caltrain's official feed
 - [ ] Support for holiday schedules
-
-## License
-
-MIT
